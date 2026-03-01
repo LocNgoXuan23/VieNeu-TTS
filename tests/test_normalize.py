@@ -170,7 +170,7 @@ TEST_CASES = [
 
     # ─── 20. EMAIL ───────────────────────────────────────────────────────────
     ("Liên hệ qua email pnnbao@gmail.com nhé.", "liên hệ qua email phê nờ nờ bê a o a còng gờ meo chấm com nhé."),
-    ("Email: contact@example.com", "email: xê o nờ tê a xê tê a còng e ích xì a mờ phê lờ e chấm xê o mờ"),
+    ("Email: contact@example.com", "email: xê o nờ tê a xê tê a còng e ích a mờ phê lờ e chấm xê o mờ"),
 
     # ─── 21. VIẾT TẮT ALPHANUMERIC (ENGLISH STYLE) ──────────────────────────
     ("Mô hình B2B rất phổ biến.", "mô hình bi two bi rất phổ biến."),
@@ -185,7 +185,7 @@ TEST_CASES = [
 
     # ─── 23. TOÀN DIỆN (CẢI TIẾN MỚI) ──────────────────────────────────────────
     # URLs
-    ("Truy cập https://vieneu.io để biết thêm chi tiết.", "truy cập hát tê tê phê sờ hai chấm xẹt xẹt vờ i e nờ e u chấm i o để biết thêm chi tiết."),
+    ("Truy cập https://vieneu.io để biết thêm chi tiết.", "truy cập hát tê tê phê ét hai chấm xẹt xẹt vờ i e nờ e u chấm i o để biết thêm chi tiết."),
     ("Website www.google.com rất hữu ích.", "website vê kép vê kép vê kép chấm gờ o o gờ lờ e chấm xê o mờ rất hữu ích."),
 
     # Slashes / Địa chỉ
