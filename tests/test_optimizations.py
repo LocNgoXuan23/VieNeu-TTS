@@ -18,25 +18,34 @@ def test_phonemize_batch_deduplication():
 
     # Patch the actual espeak phonemize call
     with patch("vieneu_utils.phonemize_text.phonemize") as mock_phonemize:
-        # All unique unknown words (bàn, cái, ghế, world) are sent in one batch.
-        # sorted(list({'bàn', 'cái', 'ghế', 'world'})) -> ['bàn', 'cái', 'ghế', 'world']
-        mock_phonemize.return_value = ["ban", "kai", "ge", "w-o-r-l-d"]
+        # We now have TWO calls: one for VI accented words and one for EN unaccented words.
+        # Call 1 (VI): ['bàn', 'cái', 'ghế']
+        # Call 2 (EN): ['world']
+        
+        mock_phonemize.side_effect = [
+            ["ban", "kai", "ge"], # Result for VI words
+            ["w-o-r-l-d"]          # Result for EN words
+        ]
 
         # Use an empty custom dict (and no system dictionary) 
         # to ensure all words are treated as unknown fallback.
         results = phonemize_batch(texts, phoneme_dict={})
 
-        # Verify deduplication: 1 single call to espeak backend
-        assert mock_phonemize.call_count == 1
-
-        # Check if all unique unknown words were sent in that one call
-        call_args = mock_phonemize.call_args[0][0]
-        assert len(call_args) == 4
+        # Verify: 2 calls to espeak backend (one per language)
+        assert mock_phonemize.call_count == 2
         
-        # Convert list elements to lower case for insensitive comparison
-        call_args_lower = [w.lower() for w in call_args]
-        assert "world" in call_args_lower
-        assert "cái" in call_args_lower
+        # Check arguments of the calls
+        all_calls = mock_phonemize.call_args_list
+        
+        # Order should be VI then EN-US based on implementation
+        vi_call_words = all_calls[0][0][0]
+        en_call_words = all_calls[1][0][0]
+        
+        assert len(vi_call_words) == 3
+        assert len(en_call_words) == 1
+        
+        assert "world" in [w.lower() for w in en_call_words]
+        assert "cái" in [w.lower() for w in vi_call_words]
 
 def test_phonemize_with_dict_caching():
     from vieneu_utils.phonemize_text import _phonemize_with_dict_cached

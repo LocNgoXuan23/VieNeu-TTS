@@ -217,12 +217,32 @@ def phonemize_batch(texts: list[str], skip_normalize: bool = False, phoneme_dict
 
     if global_unknown:
         u_words = sorted(list(global_unknown))
-        res_phones = espeak_fallback_batch(u_words, 'vi')
-        lut = {w: f"<en>{p}" for w, p in zip(u_words, res_phones)}
+        # Logic: if word has accents, use 'vi', else use 'en-us'
+        vi_accents = "àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ"
+        def has_accent(w): return any(c in vi_accents for c in w.lower())
+        
+        vi_words = [w for w in u_words if has_accent(w)]
+        en_words = [w for w in u_words if not has_accent(w)]
+        
+        lut = {}
+        if vi_words:
+            res_vi = espeak_fallback_batch(vi_words, 'vi')
+            for w, p in zip(vi_words, res_vi):
+                lut[w] = p
+        if en_words:
+            res_en = espeak_fallback_batch(en_words, 'en-us')
+            for w, p in zip(en_words, res_en):
+                lut[w] = f"<en>{p}"
+                
         for sent in batch_token_lists:
             for t in sent:
                 if t['phone'] is None and t['content'] in lut:
                     t['phone'] = lut[t['content']]
+                    # Also update lang based on accent
+                    if has_accent(t['content']):
+                        t['lang'] = 'vi'
+                    else:
+                        t['lang'] = 'en'
 
     results = []
     for sent in batch_token_lists:
