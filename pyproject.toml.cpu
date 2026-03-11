@@ -1,4 +1,9 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.uv]
+package = true
 index-strategy = "unsafe-best-match"
 
 [[tool.uv.index]]
@@ -12,7 +17,7 @@ url = "https://pypi.org/simple"
 
 [project]
 name = "vieneu"
-version = "1.2.3"
+version = "1.2.7"
 description = "Advanced on-device Vietnamese TTS with instant voice cloning"
 readme = "README.md"
 authors = [
