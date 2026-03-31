@@ -63,7 +63,7 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "sea-g2p>=0.7.5",
-    "onnxruntime>=1.23.2",
+    "onnxruntime>=1.20",
     "llama-cpp-python>=0.3.16",
     "requests",
     "numpy",
