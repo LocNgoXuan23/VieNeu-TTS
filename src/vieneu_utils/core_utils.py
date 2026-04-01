@@ -136,111 +136,208 @@ def split_text_into_chunks(text: str, max_chars: int = 256) -> List[str]:
 
     return [c.strip() for c in final_chunks if c.strip()]
 
-def split_into_chunks_v2(full_phones: str, max_chunk_size: int = 256, min_chunk_size: int = 10) -> List[str]:
+import re
+from dataclasses import dataclass
+from typing import List, Tuple, Optional
+
+# ─── Regex ───────────────────────────────────────────────────────────────────
+
+RE_NEWLINE          = re.compile(r'\n+')
+RE_SENTENCE_FINDALL = re.compile(r'[^.!?]*[.!?]|[^.!?]+')
+
+_NOISE_RULES: List[Tuple[re.Pattern, str]] = [
+    (re.compile(r'([.!?])[.,;:]+'), r'\1'),  # '.,' → '.'
+    (re.compile(r'[.,;:]+([.!?])'), r'\1'),  # ',.' → '.'
+    (re.compile(r'\s+[,;]\s+'),     ' '),    # ' , ' → ' '
+    (re.compile(r' {2,}'),          ' '),    # spaces thừa
+]
+_MULTI_PUNCT = re.compile(r'([.!?])\s*[.!?]+')
+
+# ─── Data class ──────────────────────────────────────────────────────────────
+
+@dataclass
+class PhoneChunk:
+    text: str
+    is_sentence_end: bool  # True = kết thúc câu thật | False = cắt nhân tạo
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+
+def _pick_strongest(m: re.Match) -> str:
+    s = m.group(0)
+    return '!' if '!' in s else '?' if '?' in s else '.'
+
+
+def _clean_phoneme_noise(text: str) -> str:
+    for pattern, repl in _NOISE_RULES:
+        text = pattern.sub(repl, text)
+    text = _MULTI_PUNCT.sub(_pick_strongest, text)
+    return text.strip()
+
+
+def _find_best_split(text: str, max_size: int) -> Tuple[int, bool]:
     """
-    Phân đoạn phonemes cho VieNeu v2 (Turbo).
-    1. Ưu tiên tách tối đa: Mỗi câu (.?!) là một chunk riêng.
-    2. Nếu câu quá dài (>max), tách tiếp theo dấu phụ (,:;-) hoặc space.
-    3. Gộp các chunk cực ngắn (<10) vào nhau để tránh bị cụt.
+    Một lần duyệt tìm đồng thời vị trí phẩy và space gần giữa nhất.
+    Trả về (pos, is_comma). pos=-1 nếu không tìm thấy.
+    """
+    mid = max_size // 2
+    best_comma_pos, best_comma_dist = -1, max_size
+    best_space_pos, best_space_dist = -1, max_size
+
+    for i in range(min(max_size, len(text))):
+        ch = text[i]
+        if ch == ',':
+            d = abs(i - mid)
+            if d < best_comma_dist:
+                best_comma_dist, best_comma_pos = d, i
+        elif ch == ' ':
+            d = abs(i - mid)
+            if d < best_space_dist:
+                best_space_dist, best_space_pos = d, i
+
+    if best_comma_pos != -1:
+        return best_comma_pos, True
+    if best_space_pos != -1:
+        return best_space_pos, False
+    return -1, False
+
+
+def _smart_split_body(text: str, max_chunk_size: int) -> List[str]:
+    """Iterative split, trả về list sub-chunk không có dấu câu cuối."""
+    result: List[str] = []
+    stack = [text.strip()]
+
+    while stack:
+        seg = stack.pop()
+        if not seg:
+            continue
+        if len(seg) <= max_chunk_size:
+            result.append(seg)
+            continue
+
+        pos, _ = _find_best_split(seg, max_chunk_size)
+
+        if pos != -1:
+            left  = seg[:pos].rstrip()
+            right = seg[pos + 1:].lstrip()
+        else:
+            cut = max_chunk_size
+            while cut > 0 and seg[cut - 1] != ' ':
+                cut -= 1
+            if cut == 0:
+                cut = max_chunk_size
+            left  = seg[:cut].rstrip()
+            right = seg[cut:].lstrip()
+
+        if right:
+            stack.append(right)
+        if left:
+            stack.append(left)
+
+    return result
+
+
+def _split_sentence(sent: str, max_chunk_size: int) -> List[PhoneChunk]:
+    sent = sent.strip()
+    if not sent:
+        return []
+
+    if sent[-1] in '.!?':
+        body  = sent[:-1].rstrip()
+        punct = sent[-1]
+    else:
+        body  = sent
+        punct = '.'
+
+    if not body:
+        return []
+
+    # Câu vừa khít → sentence end thật
+    if len(sent) <= max_chunk_size:
+        return [PhoneChunk(text=body + punct, is_sentence_end=True)]
+
+    sub_chunks = _smart_split_body(body, max_chunk_size)
+    if not sub_chunks:
+        return [PhoneChunk(text=punct, is_sentence_end=True)]
+
+    last_idx = len(sub_chunks) - 1
+    return [
+        PhoneChunk(
+            text=chunk + (punct if i == last_idx else '.'),
+            is_sentence_end=(i == last_idx),
+        )
+        for i, chunk in enumerate(sub_chunks)
+        if chunk
+    ]
+
+# ─── Public API ──────────────────────────────────────────────────────────────
+
+def split_into_chunks_v2(
+    full_phones: str,
+    max_chunk_size: int = 256,
+    min_chunk_size: int = 10,
+) -> List[PhoneChunk]:
+    """
+    Phân đoạn chuỗi phoneme thành các PhoneChunk.
+      is_sentence_end=True  → kết thúc câu thật → cần silence khi ghép audio
+      is_sentence_end=False → cắt nhân tạo tại space/phẩy → không cần silence
     """
     if not full_phones:
         return []
 
-    # Bước 1: Tách theo đoạn (newline)
-    paragraphs = RE_NEWLINE.split(full_phones.strip())
-    raw_parts: List[str] = []
+    full_phones = _clean_phoneme_noise(full_phones)
 
-    for para in paragraphs:
+    raw_parts: List[PhoneChunk] = []
+    for para in RE_NEWLINE.split(full_phones):
         para = para.strip()
         if not para:
             continue
-        
-        # Bước 2: Luôn tách theo câu (.?!)
-        # Sử dụng pattern từ app_gguf.py cho phonemes
-        sentences = RE_SENTENCE_END.split(para)
-        for sent in sentences:
+        for sent in RE_SENTENCE_FINDALL.findall(para):
             sent = sent.strip()
-            if not sent:
-                continue
-            
-            # Nếu câu quá dài, phải xé nhỏ tiếp
-            if len(sent) > max_chunk_size:
-                sub_parts = RE_MINOR_PUNCT.split(sent)
-                sub_buf = ""
-                for part in sub_parts:
-                    part = part.strip()
-                    if not part:
-                        continue
+            if sent:
+                raw_parts.extend(_split_sentence(sent, max_chunk_size))
 
-                    if len(part) > max_chunk_size:
-                        # Flush sub_buf trước
-                        if sub_buf:
-                            raw_parts.append(sub_buf)
-                            sub_buf = ""
-                        # Xé theo space
-                        words = part.split()
-                        current = ""
-                        for word in words:
-                            if current and len(current) + 1 + len(word) > max_chunk_size:
-                                raw_parts.append(current)
-                                current = word
-                            else:
-                                current = (current + " " + word) if current else word
-                        if current:
-                            raw_parts.append(current)
-                    elif sub_buf and len(sub_buf) + 1 + len(part) > max_chunk_size:
-                        # sub_buf đầy, flush rồi bắt đầu mới
-                        raw_parts.append(sub_buf)
-                        sub_buf = part
-                    else:
-                        sub_buf = (sub_buf + " " + part) if sub_buf else part
-
-                if sub_buf:
-                    raw_parts.append(sub_buf)
-            else:
-                raw_parts.append(sent)
-
-    # Bước 3: Gộp các chunk quá ngắn (< min_chunk_size)
     if not raw_parts:
         return []
 
-    merged: List[str] = []
+    # Merge chunk quá ngắn
+    merged: List[PhoneChunk] = []
     i = 0
-    while i < len(raw_parts):
-        current = raw_parts[i]
-        
-        # Nếu chunk hiện tại quá ngắn, cố gắng gộp với chunk kế tiếp
-        while len(current) < min_chunk_size and i + 1 < len(raw_parts):
-            next_p = raw_parts[i + 1]
-            # Chỉ gộp nếu không vượt quá giới hạn tối đa
-            if len(current) + 1 + len(next_p) <= max_chunk_size:
-                current = (current + " " + next_p).strip()
+    n = len(raw_parts)
+    while i < n:
+        cur = raw_parts[i]
+        while len(cur.text) < min_chunk_size and i + 1 < n:
+            nxt       = raw_parts[i + 1]
+            candidate = cur.text.rstrip('.!?').rstrip() + ' ' + nxt.text
+            if len(candidate) <= max_chunk_size:
+                cur = PhoneChunk(text=candidate, is_sentence_end=nxt.is_sentence_end)
                 i += 1
             else:
                 break
-        
-        merged.append(current)
+        merged.append(cur)
         i += 1
 
-    # Xử lý trường hợp chunk cuối cùng vẫn quá ngắn → gộp ngược vào trước
-    if len(merged) >= 2 and len(merged[-1]) < min_chunk_size:
-        last = merged.pop()
-        if len(merged[-1]) + 1 + len(last) <= max_chunk_size:
-            merged[-1] = (merged[-1] + " " + last).strip()
+    # Gộp ngược chunk cuối nếu vẫn quá ngắn
+    if len(merged) >= 2 and len(merged[-1].text) < min_chunk_size:
+        last      = merged.pop()
+        candidate = merged[-1].text.rstrip('.!?').rstrip() + ' ' + last.text
+        if len(candidate) <= max_chunk_size:
+            merged[-1] = PhoneChunk(text=candidate, is_sentence_end=last.is_sentence_end)
         else:
             merged.append(last)
 
-    return [m for m in merged if m]
+    return merged
 
-def get_silence_duration_v2(chunk_phones: str) -> float:
-    """Trả về thời gian silence dựa trên dấu câu cho bản v2."""
-    stripped = chunk_phones.strip()
-    # Kiểm tra dấu câu ở cuối chunk
-    if re.search(r'[\.\!\?\…]$', stripped):
-        return 0.3
-    elif re.search(r'[\,\;\:\-\u2013\u2014]$', stripped):
-        return 0.15
-    return 0.05
+
+def get_silence_duration_v2(chunk: PhoneChunk) -> float:
+    """
+    Silence sau chunk (giây).
+      is_sentence_end=False → 0.0s  (cắt nhân tạo, không cần nghỉ)
+      kết thúc '.' → 0.3s
+      kết thúc '!'/'?' → 0.4s
+    """
+    if not chunk.is_sentence_end:
+        return 0.0
+    return 0.4 if chunk.text.strip()[-1] in '!?' else 0.3
 
 def env_bool(name: str, default: bool = False) -> bool:
     """Get boolean value from environment variable."""

@@ -754,7 +754,7 @@ def synthesize_speech(text: str, voice_choice: str, custom_audio, custom_text: s
                     yield None, f"⚡ Turbo v2: Đang xử lý đoạn {i+1}/{total_chunks}..."
                     
                     chunk_wav = tts.infer(
-                        chunk, 
+                        chunk.text, 
                         ref_codes=ref_codes, 
                         temperature=temperature,
                         max_chars=max_chars_chunk,

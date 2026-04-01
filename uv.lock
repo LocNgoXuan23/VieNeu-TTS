@@ -5409,7 +5409,7 @@ requires-dist = [
     { name = "lmdeploy", marker = "python_full_version == '3.12.*' and sys_platform == 'win32' and extra == 'gpu'", url = "https://github.com/InternLM/lmdeploy/releases/download/v0.11.0/lmdeploy-0.11.0+cu128-cp312-cp312-win_amd64.whl" },
     { name = "neucodec", marker = "extra == 'gpu'", specifier = ">=0.0.4" },
     { name = "numpy" },
-    { name = "onnxruntime", specifier = ">=1.20.1" },
+    { name = "onnxruntime", specifier = ">=1.20.0" },
     { name = "perth", specifier = ">=0.2.0" },
     { name = "pyyaml" },
     { name = "requests" },
