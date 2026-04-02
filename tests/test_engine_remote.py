@@ -8,7 +8,7 @@ from vieneu.remote import RemoteVieNeuTTS
 def remote_tts():
     with patch("vieneu.base.hf_hub_download") as mock_hf:
         mock_hf.return_value = None  # Mock voice loading
-        return RemoteVieNeuTTS(api_base="http://fake-api:23333/v1", model_name="fake-model")
+        return RemoteVieNeuTTS(api_base="https://fake-api:23333/v1", model_name="fake-model")
 
 def test_remote_format_prompt(remote_tts):
     ref_codes = [1, 2, 3]
@@ -39,7 +39,7 @@ def test_remote_infer_single_chunk(mock_post, remote_tts):
 
 def test_remote_parallel_chunking():
     with patch("vieneu.standard.DistillNeuCodec.from_pretrained"):
-        tts = RemoteVieNeuTTS(api_base="http://mock", model_name="mock")
+        tts = RemoteVieNeuTTS(api_base="https://mock", model_name="mock")
         with patch("vieneu.remote.split_text_into_chunks", return_value=["chunk1", "chunk2"]), \
              patch.object(RemoteVieNeuTTS, 'infer_async', return_value=np.zeros(2000)) as mock_async, \
              patch.object(RemoteVieNeuTTS, '_resolve_ref_voice', return_value=(torch.zeros(10), "ref")):

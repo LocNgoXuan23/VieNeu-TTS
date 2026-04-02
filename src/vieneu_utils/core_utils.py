@@ -8,7 +8,7 @@ import numpy as np
 # ─── Regex ───────────────────────────────────────────────────────────────────
 
 RE_NEWLINE          = re.compile(r'[\r\n]+')  # dùng chung cho cả v1 và v2
-RE_SENTENCE_FINDALL = re.compile(r'[^.!?]*[.!?]|[^.!?]+')
+RE_SENTENCE_FINDALL = re.compile(r'[^.!?]+[.!?]*|[.!?]+')
 
 # v1 only
 RE_SENTENCE_END = re.compile(r'(?<=[\.\!\?\…])\s+')
