@@ -189,7 +189,10 @@ class TurboGPUVieNeuTTS(BaseTurboVieNeuTTS):
     def infer(self, text: str, voice: Optional[Any] = None, ref_codes: Optional[Any] = None, temperature: float = 0.4, top_k: int = 50, max_chars: int = 256, skip_normalize: bool = False, skip_phonemize: bool = False, show_progress: bool = True, apply_watermark: bool = True, **kwargs) -> np.ndarray:
         phonemes = phonemize_text(text) if not skip_phonemize else text
         chunks = split_into_chunks_v2(phonemes, max_chunk_size=max_chars)
-        voice_embedding = self._get_voice_params(voice or ref_codes or self.get_preset_voice())
+
+        if voice is None:
+            voice = ref_codes if ref_codes is not None else self.get_preset_voice()
+        voice_embedding = self._get_voice_params(voice)
 
         all_wavs = []
         pbar = tqdm(chunks, desc="🚀 Synthesizing", disable=not (show_progress and len(chunks) > 1), leave=False)
@@ -216,7 +219,9 @@ class TurboGPUVieNeuTTS(BaseTurboVieNeuTTS):
         return final_wav
 
     def infer_batch(self, texts: List[str], voice: Optional[Any] = None, ref_codes: Optional[Any] = None, temperature: float = 0.4, top_k: int = 50, max_batch_size: int = 4, apply_watermark: bool = True, **kwargs) -> List[np.ndarray]:
-        voice_embedding = self._get_voice_params(voice or ref_codes or self.get_preset_voice())
+        if voice is None:
+            voice = ref_codes if ref_codes is not None else self.get_preset_voice()
+        voice_embedding = self._get_voice_params(voice)
         chunk_phonemes = phonemize_batch(texts, skip_normalize=True)
         
         all_wavs = []
@@ -238,7 +243,10 @@ class TurboGPUVieNeuTTS(BaseTurboVieNeuTTS):
     def infer_stream(self, text: str, voice: Optional[Any] = None, ref_codes: Optional[Any] = None, temperature: float = 0.4, top_k: int = 50, max_chars: int = 256, **kwargs) -> Generator[np.ndarray, None, None]:
         phonemes = phonemize_text(text)
         chunks = split_into_chunks_v2(phonemes, max_chunk_size=max_chars)
-        voice_embedding = self._get_voice_params(voice or ref_codes or self.get_preset_voice())
+
+        if voice is None:
+            voice = ref_codes if ref_codes is not None else self.get_preset_voice()
+        voice_embedding = self._get_voice_params(voice)
 
         for i, chunk in enumerate(chunks):
             prompt = self._format_turbo_prompt(chunk.text)
@@ -303,7 +311,10 @@ class TurboVieNeuTTS(BaseTurboVieNeuTTS):
     def infer(self, text: str, voice: Optional[Any] = None, ref_codes: Optional[Any] = None, temperature: float = 0.4, top_k: int = 50, max_chars: int = 256, skip_normalize: bool = False, skip_phonemize: bool = False, show_progress: bool = True, apply_watermark: bool = True, **kwargs) -> np.ndarray:
         phonemes = phonemize_text(text) if not skip_phonemize else text
         chunks = split_into_chunks_v2(phonemes, max_chunk_size=max_chars)
-        voice_embedding = self._get_voice_params(voice or ref_codes or self.get_preset_voice())
+
+        if voice is None:
+            voice = ref_codes if ref_codes is not None else self.get_preset_voice()
+        voice_embedding = self._get_voice_params(voice)
 
         all_wavs = []
         pbar = tqdm(chunks, desc="🚀 Synthesizing", disable=not (show_progress and len(chunks) > 1), leave=False)
@@ -329,7 +340,10 @@ class TurboVieNeuTTS(BaseTurboVieNeuTTS):
     def infer_stream(self, text: str, voice: Optional[Any] = None, ref_codes: Optional[Any] = None, temperature: float = 0.4, top_k: int = 50, max_chars: int = 256, **kwargs) -> Generator[np.ndarray, None, None]:
         phonemes = phonemize_text(text)
         chunks = split_into_chunks_v2(phonemes, max_chunk_size=max_chars)
-        voice_embedding = self._get_voice_params(voice or ref_codes or self.get_preset_voice())
+
+        if voice is None:
+            voice = ref_codes if ref_codes is not None else self.get_preset_voice()
+        voice_embedding = self._get_voice_params(voice)
 
         for i, chunk in enumerate(chunks):
             self.backbone.reset()
@@ -345,7 +359,9 @@ class TurboVieNeuTTS(BaseTurboVieNeuTTS):
                     yield np.zeros(int(self.sample_rate * silence_dur), dtype=np.float32)
 
     def infer_batch(self, texts: List[str], voice: Optional[Any] = None, ref_codes: Optional[Any] = None, temperature: float = 0.4, top_k: int = 50, max_batch_size: int = 4, apply_watermark: bool = True, **kwargs) -> List[np.ndarray]:
-        voice_embedding = self._get_voice_params(voice or ref_codes or self.get_preset_voice())
+        if voice is None:
+            voice = ref_codes if ref_codes is not None else self.get_preset_voice()
+        voice_embedding = self._get_voice_params(voice)
         all_wavs = []
         for i in range(0, len(texts), max_batch_size):
             batch_texts = texts[i : i + max_batch_size]
