@@ -1,0 +1,35 @@
+# NOTE: On Jetson Orin NX, docker-compose networking may fail due to
+# missing iptable_raw kernel module. Use run.sh instead:
+#
+#   bash deploy/jetson/run.sh          # CPU mode (default)
+#   bash deploy/jetson/run.sh gpu      # GPU mode
+#   bash deploy/jetson/run.sh stop     # Stop
+#
+# This file is kept as a reference for the service configuration.
+
+services:
+  vieneu-tts:
+    build:
+      context: ../..
+      dockerfile: deploy/jetson/Dockerfile
+    network_mode: host
+    runtime: nvidia
+    environment:
+      - TTS_DEVICE=${TTS_DEVICE:-cpu}
+      - TTS_GPU_LAYERS=${TTS_GPU_LAYERS:-0}
+      - TTS_THREADS=${TTS_THREADS:-4}
+      - HF_HOME=/root/.cache/huggingface
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    restart: unless-stopped
+
+volumes:
+  hf-cache:

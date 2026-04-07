@@ -302,11 +302,12 @@ class TurboVieNeuTTS(BaseTurboVieNeuTTS):
             logger.info(f"⏳ Downloading/Loading Turbo GGUF from: {backbone_repo}...")
             model_path = hf_hub_download(repo_id=backbone_repo, filename=backbone_filename, token=hf_token)
 
+        n_gpu = kwargs.pop("n_gpu_layers", -1 if device == "cuda" else 0)
         self.backbone = Llama(
-            model_path=model_path, n_ctx=self.max_context, n_gpu_layers=-1 if device == "cuda" else 0,
-            mlock=True, flash_attn=device == "cuda", verbose=False, **kwargs
+            model_path=model_path, n_ctx=self.max_context, n_gpu_layers=n_gpu,
+            mlock=True, flash_attn=device == "cuda" and n_gpu != 0, verbose=False, **kwargs
         )
-        logger.info(f"✅ Turbo GGUF ready")
+        logger.info(f"✅ Turbo GGUF ready (gpu_layers={n_gpu})")
 
     def infer(self, text: str, voice: Optional[Any] = None, ref_codes: Optional[Any] = None, temperature: float = 0.4, top_k: int = 50, max_chars: int = 256, skip_normalize: bool = False, skip_phonemize: bool = False, show_progress: bool = True, apply_watermark: bool = True, **kwargs) -> np.ndarray:
         phonemes = phonemize_text(text) if not skip_phonemize else text

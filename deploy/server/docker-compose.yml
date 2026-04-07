@@ -1,0 +1,32 @@
+services:
+  vieneu-api:
+    build:
+      context: ../..
+      dockerfile: deploy/server/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TTS_MODE=turbo_gpu
+      - TTS_DEVICE=cuda
+      - TTS_BACKEND=lmdeploy
+      - HF_HOME=/root/.cache/huggingface
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+
+volumes:
+  hf-cache:

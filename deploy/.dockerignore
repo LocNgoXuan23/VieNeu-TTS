@@ -1,0 +1,34 @@
+# Only src/vieneu, src/vieneu_utils, and deploy/ are needed for API serving.
+# Exclude everything else to minimize Docker context and image size.
+
+apps/
+client/
+docker/
+docs/
+examples/
+finetune/
+tests/
+
+*.md
+Makefile
+LICENSE
+*.bat
+*.lock
+.python-version
+.env*
+.dockerignore
+.gitignore
+.git/
+.github/
+
+__pycache__/
+*.pyc
+*.pyo
+*.py[cod]
+.venv/
+venv/
+
+output_audio/
+*.wav
+*.log
+.cache/
