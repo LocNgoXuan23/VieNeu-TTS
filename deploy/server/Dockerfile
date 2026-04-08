@@ -51,7 +51,7 @@ WORKDIR /workspace
 
 # Copy project metadata for dependency install (cache-friendly)
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev --group gpu
+RUN uv sync --no-dev --group gpu --no-install-project
 
 # Install FastAPI deps
 RUN uv pip install fastapi "uvicorn[standard]" python-multipart
