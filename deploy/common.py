@@ -30,6 +30,9 @@ class AppConfig:
     n_threads: int = field(default_factory=lambda: int(os.environ.get("TTS_THREADS", "0")))
     port: int = field(default_factory=lambda: int(os.environ.get("PORT", "7860")))
     workers: int = field(default_factory=lambda: int(os.environ.get("WORKERS", "1")))
+    backbone_path: str = field(default_factory=lambda: os.environ.get("TTS_BACKBONE_PATH", ""))
+    decoder_path: str = field(default_factory=lambda: os.environ.get("TTS_DECODER_PATH", ""))
+    encoder_path: str = field(default_factory=lambda: os.environ.get("TTS_ENCODER_PATH", ""))
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +130,13 @@ def load_engine(config: AppConfig):
 
     if config.tts_backend:
         kwargs["backend"] = config.tts_backend
+
+    if config.backbone_path:
+        kwargs["backbone_repo"] = config.backbone_path
+    if config.decoder_path:
+        kwargs["decoder_repo"] = config.decoder_path
+    if config.encoder_path:
+        kwargs["encoder_repo"] = config.encoder_path
 
     if config.tts_mode in ("turbo",):
         kwargs["decoder_filename"] = config.decoder_filename
