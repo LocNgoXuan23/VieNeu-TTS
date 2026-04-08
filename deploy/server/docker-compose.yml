@@ -9,10 +9,10 @@ services:
       - TTS_MODE=turbo_gpu
       - TTS_DEVICE=cuda
       - TTS_BACKEND=lmdeploy
-      - HF_HOME=/root/.cache/huggingface
       - PYTHONUNBUFFERED=1
     volumes:
-      - hf-cache:/root/.cache/huggingface
+      - ../../src:/workspace/src
+      - ../../deploy:/workspace/deploy
     deploy:
       resources:
         reservations:
@@ -27,6 +27,3 @@ services:
       retries: 5
       start_period: 120s
     restart: unless-stopped
-
-volumes:
-  hf-cache:
