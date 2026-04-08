@@ -1,8 +1,31 @@
+# =============================================================================
+# Stage 1: Download models from HuggingFace (discarded after build)
+# =============================================================================
+FROM python:3.12-slim AS model-downloader
+
+RUN pip install --no-cache-dir huggingface_hub
+
+# Download server turbo_gpu models to /models/
+# Pin revisions for reproducible builds
+ARG BACKBONE_REVISION=main
+ARG CODEC_REVISION=main
+
+RUN python3 -c "\
+from huggingface_hub import snapshot_download, hf_hub_download; \
+snapshot_download('pnnbao-ump/VieNeu-TTS-v2-Turbo', \
+    local_dir='/models/backbone', revision='${BACKBONE_REVISION}'); \
+hf_hub_download('pnnbao-ump/VieNeu-Codec', 'vieneu_decoder.onnx', \
+    local_dir='/models', revision='${CODEC_REVISION}'); \
+hf_hub_download('pnnbao-ump/VieNeu-Codec', 'vieneu_encoder.onnx', \
+    local_dir='/models', revision='${CODEC_REVISION}')"
+
+# =============================================================================
+# Stage 2: Runtime
+# =============================================================================
 FROM nvidia/cuda:12.8.0-runtime-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    HF_HOME=/root/.cache/huggingface \
     PHONEMIZER_ESPEAK_LIBRARY=/usr/lib/x86_64-linux-gnu/libespeak-ng.so.1 \
     PATH="/workspace/.venv/bin:$PATH"
 
@@ -33,13 +56,18 @@ RUN uv sync --no-dev --group gpu
 # Install FastAPI deps
 RUN uv pip install fastapi "uvicorn[standard]" python-multipart
 
-# Copy only what's needed for serving
-COPY src/vieneu/ ./src/vieneu/
-COPY src/vieneu_utils/ ./src/vieneu_utils/
-COPY deploy/common.py ./deploy/common.py
-COPY deploy/server/main.py ./deploy/server/main.py
+# Copy models from downloader stage (baked into image)
+COPY --from=model-downloader /models /models
 
-ENV PYTHONPATH="/workspace/src:/workspace"
+# Source code is NOT copied — mounted at runtime via:
+#   -v ./src:/workspace/src
+#   -v ./deploy:/workspace/deploy
+
+# Model paths (used by deploy/common.py AppConfig)
+ENV TTS_BACKBONE_PATH="/models/backbone" \
+    TTS_DECODER_PATH="/models/vieneu_decoder.onnx" \
+    TTS_ENCODER_PATH="/models/vieneu_encoder.onnx" \
+    PYTHONPATH="/workspace/src:/workspace"
 
 EXPOSE 8000
 
