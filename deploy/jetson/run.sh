@@ -42,8 +42,8 @@ docker run -d \
   -e TTS_GPU_LAYERS="$TTS_GPU_LAYERS" \
   -e TTS_THREADS="$TTS_THREADS" \
   -e NVIDIA_VISIBLE_DEVICES=all \
-  -e HF_HOME=/root/.cache/huggingface \
-  -v vieneu-hf-cache:/root/.cache/huggingface \
+  -v "$(pwd)/src:/workspace/src" \
+  -v "$(pwd)/deploy:/workspace/deploy" \
   --restart unless-stopped \
   "$IMAGE"
 
