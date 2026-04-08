@@ -13,6 +13,9 @@ wheels/
 outputs/
 .env
 
+# Local config (contains credentials)
+CLAUDE.md
+
 # Finetune Data & Checkpoints
 finetune/dataset/
 finetune/output/
