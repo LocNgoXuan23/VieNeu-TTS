@@ -1,5 +1,6 @@
 services:
   vieneu-api:
+    image: vieneu-tts:v1.0.0-turbogpu-cuda12.8
     build:
       context: ../..
       dockerfile: deploy/server/Dockerfile

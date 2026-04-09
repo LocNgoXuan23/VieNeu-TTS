@@ -9,6 +9,7 @@
 
 services:
   vieneu-tts:
+    image: vieneu-tts:v1.0.0-turbo-jetpack6.0
     build:
       context: ../..
       dockerfile: deploy/jetson/Dockerfile

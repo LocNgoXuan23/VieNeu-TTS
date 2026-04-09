@@ -7,7 +7,7 @@
 
 set -e
 
-IMAGE="vieneu-tts-jetson:latest"
+IMAGE="vieneu-tts:v1.0.0-turbo-jetpack6.0"
 CONTAINER="vieneu-tts"
 
 case "${1:-cpu}" in
